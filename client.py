@@ -1,6 +1,6 @@
 from socket import *
 
-HOST = '157.51.128.179:60364'
+HOST = ''
 PORT = 8000
 s = socket(AF_INET, SOCK_STREAM)
 s.connect((HOST, 8000)) 
