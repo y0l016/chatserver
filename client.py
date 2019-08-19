@@ -2,6 +2,7 @@ import argparse
 
 from socket import *
 
+
 if __main__ == "__name__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar="", help="server's address")
@@ -20,3 +21,6 @@ if __main__ == "__name__":
             print("Awaiting reply")
             reply = s.recv(1024)
             print("Received", repr(reply))
+
+s.close()
+
