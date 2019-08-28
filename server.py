@@ -9,8 +9,6 @@ SOCKET_LIST = {}
 BAN_LIST    = []
 OP_LIST     = []
 
-# TODO: read op list, ban list from a file in init. write ban list and op list to file after main loop
-
 # utils
 
 def send_all(data, sent_from):
@@ -106,6 +104,13 @@ def init():
     SERV_SOCKET.bind((HOST, PORT))
     SERV_SOCKET.listen()
     SOCKET_LIST[HOST] = ("server", SERV_SOCKET)
+    with open("op") as f:
+        # using this instead of readlines because readlines have \n
+        # at the end of each line which we DO NOT want
+        OP_LIST = f.read().split("\n")
+    with open("ban") as f:
+        # the same applies here too
+        BAN_LIST = f.read().split("\n")
 
 def main():
     readable, _, _ = select([i[-1] for i in SOCKET_LIST.values()], [], [], 0)
@@ -149,3 +154,7 @@ if __name__ == "__main__":
     while 1:
         main()
     SERV_SOCKET.close()
+    with open("op") as f:
+        f.writelines(OP_LIST)
+    with open("ban") as f:
+        f.writelines(BAN_LIST)
