@@ -99,6 +99,13 @@ def handle_cmd(sock, data):
                 clients += "\n"
         send_only(gen_msg(clients), sock)
         return False
+    elif cmd.startswith("nick"):
+        new_nick = cmd.split()[1:]
+        for k, v in SOCKET_LIST:
+            if k == addr:
+                SOCKET_LIST[addr] = (new_nick, sock)
+                break
+        return gen_msg(f"{nick} is now {new_nick}")
 
 def init():
     SERV_SOCKET.bind((HOST, PORT))
