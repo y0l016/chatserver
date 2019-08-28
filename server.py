@@ -48,7 +48,7 @@ def ban(clients):
     ban clients
     returns a message from the server saying the clients are banned
     """
-    msg = ""
+    msg = "banned"
     nc = len(clients) - 1
     for n, i in enumerate(clients):
         addr, _ = i.getpeername()
@@ -56,9 +56,9 @@ def ban(clients):
             continue
         BAN_LIST[addr] = i
         SOCKET_LIST.pop(addr)
-        msg += f"server: banned {addr}"
+        msg += addr
         if n != nc:
-            msg += "\n"
+            msg += " "
     return gen_msg(msg)
 
 def handle_cmd(sock, data):
