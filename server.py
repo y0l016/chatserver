@@ -6,8 +6,10 @@ HOST        = ""
 PORT        = 9000
 SERV_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 SOCKET_LIST = {}
-BAN_LIST    = {}
+BAN_LIST    = []
 OP_LIST     = []
+
+# TODO: read op list, ban list from a file in init. write ban list and op list to file after main loop
 
 # utils
 
@@ -16,6 +18,7 @@ def send_all(data, sent_from):
     send data to everyone except sent_from.
     """
     pass_scks = [SERV_SOCKET, sent_from]
+    sockets = [i[-1] for i in SOCKET_LIST]
     for sck in SOCKET_LIST.values():
         if sck not in pass_scks:
             try:
@@ -24,7 +27,7 @@ def send_all(data, sent_from):
                 # broken client. prolly disconnected
                 addr, _ = sck.getpeername()
                 sck.close()
-                SOCKET_LIST.remove(addr)
+                SOCKET_LIST.pop(addr)
 
 def send_only(data, send_to):
     """
@@ -52,11 +55,12 @@ def ban(clients):
     nc = len(clients) - 1
     for n, i in enumerate(clients):
         addr, _ = i.getpeername()
+        nick = SOCKET_LIST.get(addr)[0]
         if addr in BAN_LIST:
             continue
-        BAN_LIST[addr] = i
+        BAN_LIST.append(addr)
         SOCKET_LIST.pop(addr)
-        msg += addr
+        msg += SOCKET_LIST
         if n != nc:
             msg += " "
     return gen_msg(msg)
@@ -70,6 +74,7 @@ def handle_cmd(sock, data):
     """
     cmd = data.get("msg")[1:]
     addr, _ = sock.getpeername()
+    nick = SOCKET_LIST.get(addr)[0]
     if cmd.startswith("ban"):
         if addr not in OP_LIST:
             msg = gen_msg("you dont have permission to use this command")
@@ -77,7 +82,7 @@ def handle_cmd(sock, data):
             if not ok:
                 sock.close()
                 SOCKET_LIST.remove(addr)
-                return gen_msg(f"{addr} disconnected")
+                return gen_msg(f"{nick} disconnected")
             else:
                 return False
         return ban(cmd.split()[1:])
@@ -85,13 +90,13 @@ def handle_cmd(sock, data):
         SOCKET_LIST.pop(addr)
         # TODO: should we make the nick server?
         # actually should we even send this message to people?
-        return gen_msg(f"{addr} disconnected")
+        return gen_msg(f"{nick} disconnected")
     elif cmd.startswith("list"):
         # send the user list to sender socket
         clients = ""
         ns = len(SOCKET_LIST)
         for n, i in SOCKET_LIST:
-            clients += i
+            clients += i[0]
             if n != ns:
                 clients += "\n"
         send_only(gen_msg(clients), sock)
@@ -100,10 +105,10 @@ def handle_cmd(sock, data):
 def init():
     SERV_SOCKET.bind((HOST, PORT))
     SERV_SOCKET.listen()
-    SOCKET_LIST[HOST] = SERV_SOCKET
+    SOCKET_LIST[HOST] = ("server", SERV_SOCKET)
 
 def main():
-    readable, _, _ = select(SOCKET_LIST.values(), [], [], 0)
+    readable, _, _ = select([i[-1] for i in SOCKET_LIST.values()], [], [], 0)
 
     for sck in readable:
         if sck == SERV_SOCKET:
@@ -111,11 +116,16 @@ def main():
             # sockfd - socket object representing client
             # addr - address of the client (would be ip in our case)
             sockfd, addr = SERV_SOCKET.accept()
-            SOCKET_LIST[addr] = sockfd
+            # on connect, we expect the client to send its nickname
+            nick = sockfd.recv()
+            SOCKET_LIST[addr] = (nick, sockfd)
         else:
             # data is sent from the client
             try:
                 data = sck.recv()
+                if isinstance(data, str):
+                    # prolly the client sent the nickname
+                    continue
                 if data:
                     if data.get("msg").startswith('/'):
                         data = handle_cmd(sck, data)
@@ -127,9 +137,10 @@ def main():
                 else:
                     # client disconnected
                     addr, _ = sck.getpeername()
+                    nick = SOCKET_LIST.get(addr)[0]
                     if addr in SOCKET_LIST:
-                        SOCKET_LIST.remove(addr)
-                    # TODO: send some other data
+                        SOCKET_LIST.pop(addr)
+                    send_all(gen_msg(f"{nick} disconnected"), SERV_SOCKET)
             except:
                 pass
 
