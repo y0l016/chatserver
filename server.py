@@ -44,6 +44,10 @@ def gen_msg(msg):
 
 # cmds
 def ban(clients):
+    """
+    ban clients
+    returns a message from the server saying the clients are banned
+    """
     msg = ""
     nc = len(clients) - 1
     for n, i in enumerate(clients):
@@ -76,7 +80,7 @@ def handle_cmd(sock, data):
                 return gen_msg(f"{addr} disconnected")
             else:
                 return False
-        return ban(msg.split()[1:])
+        return ban(cmd.split()[1:])
     elif cmd.startswith("disconnect"):
         SOCKET_LIST.pop(addr)
         # TODO: should we make the nick server?
@@ -95,6 +99,7 @@ def main():
         if sck == SERV_SOCKET:
             # a new client has connected
             # sockfd - socket object representing client
+            # addr - address of the client (would be ip in our case)
             sockfd, addr = SERV_SOCKET.accept()
             SOCKET_LIST[addr] = sockfd
         else:
@@ -104,7 +109,7 @@ def main():
                 if data:
                     if data.get("msg").startswith('/'):
                         data = handle_cmd(sck, data)
-                        # client did something that they can't do
+                        # client did an oopsie
                         if not data:
                             continue
                     # send data to all clients
