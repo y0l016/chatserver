@@ -86,6 +86,16 @@ def handle_cmd(sock, data):
         # TODO: should we make the nick server?
         # actually should we even send this message to people?
         return gen_msg(f"{addr} disconnected")
+    elif cmd.startswith("list"):
+        # send the user list to sender socket
+        clients = ""
+        ns = len(SOCKET_LIST)
+        for n, i in SOCKET_LIST:
+            clients += i
+            if n != ns:
+                clients += "\n"
+        send_only(gen_msg(clients), sock)
+        return False
 
 def init():
     SERV_SOCKET.bind((HOST, PORT))
@@ -109,7 +119,7 @@ def main():
                 if data:
                     if data.get("msg").startswith('/'):
                         data = handle_cmd(sck, data)
-                        # client did an oopsie
+                        # client did an oopsie or don't bother to send anything
                         if not data:
                             continue
                     # send data to all clients
