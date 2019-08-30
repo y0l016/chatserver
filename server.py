@@ -1,3 +1,4 @@
+import json
 import socket
 
 from select import select
@@ -41,7 +42,8 @@ def gen_msg(msg):
     """
     generate message that will be sent by the server
     """
-    return { "nick": "server", "msg": msg }
+    msg = { "nick": "server", "msg": msg }
+    return json.dumps(msg)
 
 # cmds
 
@@ -141,24 +143,25 @@ def main():
             # data is sent from the client
             try:
                 data = sck.recv()
-                if isinstance(data, str):
-                    # prolly the client sent the nickname
-                    continue
-                if data:
-                    if data.get("msg").startswith('/'):
-                        data = handle_cmd(sck, data)
-                        # client did an oopsie or don't bother to send anything
-                        if not data:
-                            continue
-                    # send data to all clients
-                    send_all(data, sck)
-                else:
+                if not data:
                     # client disconnected
                     addr, _ = sck.getpeername()
                     nick = SOCKET_LIST.get(addr)[0]
                     if addr in SOCKET_LIST:
                         SOCKET_LIST.pop(addr)
                     send_all(gen_msg(f"{nick} disconnected"), SERV_SOCKET)
+                try:
+                    data = json.loads(data)
+                except:
+                    # client sent the nickname
+                    continue
+                if data.get("msg").startswith('/'):
+                    data = handle_cmd(sck, data)
+                    # client did an oopsie or don't bother to send anything
+                    if not data:
+                        continue
+                # send data to all clients
+                send_all(data, sck)
             except:
                 pass
 
