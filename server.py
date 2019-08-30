@@ -58,7 +58,7 @@ def ban(clients):
             continue
         BAN_LIST.append(addr)
         SOCKET_LIST.pop(addr)
-        msg += SOCKET_LIST
+        msg += nick
         if n != nc:
             msg += " "
     return gen_msg(msg)
@@ -86,8 +86,6 @@ def handle_cmd(sock, data):
         return ban(cmd.split()[1:])
     elif cmd.startswith("disconnect"):
         SOCKET_LIST.pop(addr)
-        # TODO: should we make the nick server?
-        # actually should we even send this message to people?
         return gen_msg(f"{nick} disconnected")
     elif cmd.startswith("list"):
         # send the user list to sender socket
@@ -113,13 +111,18 @@ def init():
     SERV_SOCKET.bind((HOST, PORT))
     SERV_SOCKET.listen()
     SOCKET_LIST[HOST] = ("server", SERV_SOCKET)
-    with open("op") as f:
-        # using this instead of readlines because readlines have \n
-        # at the end of each line which we DO NOT want
-        OP_LIST = f.read().split("\n")
-    with open("ban") as f:
-        # the same applies here too
-        BAN_LIST = f.read().split("\n")
+    # dont think theres any cleaner way to do this :/
+    try:
+        with open("op") as f:
+            # using this instead of readlines because readlines have \n
+            # at the end of each line which we DO NOT want
+            OP_LIST = f.read().split("\n")
+    except: pass
+    try:
+        with open("ban") as f:
+            # the same applies here too
+            BAN_LIST = f.read().split("\n")
+    except: pass
 
 def main():
     readable, _, _ = select([i[-1] for i in SOCKET_LIST.values()], [], [], 0)
