@@ -3,8 +3,8 @@ import socket
 
 from select import select
 
-HOST        = ""
-PORT        = 9000
+HOST        = "localhost"
+PORT        = 9001
 SERV_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 SOCKET_LIST = {}
 BAN_LIST    = []
@@ -17,8 +17,7 @@ def send_all(data, sent_from):
     send data to everyone except sent_from.
     """
     pass_scks = [SERV_SOCKET, sent_from]
-    sockets = [i[-1] for i in SOCKET_LIST]
-    for sck in SOCKET_LIST.values():
+    for sck in [i[-1] for i in SOCKET_LIST.values()]:
         if sck not in pass_scks:
             try:
                 sck.send(data)
@@ -35,15 +34,14 @@ def send_only(data, send_to):
     """
     try:
         send_to.send(data)
-    except:
-        return False
+    except: pass # TODO: handle this properly
 
 def gen_msg(msg):
     """
     generate message that will be sent by the server
     """
     msg = { "nick": "server", "msg": msg }
-    return json.dumps(msg)
+    return bytes(json.dumps(msg), "utf-8")
 
 # cmds
 
@@ -137,12 +135,12 @@ def main():
             # addr - address of the client (would be ip in our case)
             sockfd, addr = SERV_SOCKET.accept()
             # on connect, we expect the client to send its nickname
-            nick = sockfd.recv()
+            nick = sockfd.recv(4096)
             SOCKET_LIST[addr] = (nick, sockfd)
         else:
             # data is sent from the client
             try:
-                data = sck.recv()
+                data = sck.recv(4096)
                 if not data:
                     # client disconnected
                     addr, _ = sck.getpeername()
@@ -160,17 +158,25 @@ def main():
                     # client did an oopsie or don't bother to send anything
                     if not data:
                         continue
+                data = json.dumps(data)
                 # send data to all clients
                 send_all(data, sck)
             except:
                 pass
 
-if __name__ == "__main__":
-    init()
-    while 1:
-        main()
+def on_kill():
     SERV_SOCKET.close()
     with open("op") as f:
         f.writelines(OP_LIST)
     with open("ban") as f:
         f.writelines(BAN_LIST)
+
+if __name__ == "__main__":
+    init()
+    while 1:
+        try:
+            main()
+        except KeyboardInterrupt:
+            on_kill()
+            exit(0)
+    on_kill()
